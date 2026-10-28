@@ -13,7 +13,26 @@ public class Communicator {
     /**
      * Allocate a new communicator.
      */
+
+    private Lock lock;
+    private Condition2 waitToSpeak;
+    private Condition2 waitToListen;
+    private Condition2 waitToAck;
+
+    private boolean activSpeaker;
+    private boolean hasMessage;
+    private int currentWord;
+
+
     public Communicator() {
+        lock = new Lock();
+        waitToSpeak = new Condition2(lock);
+        waitToListen = new Condition2(lock);
+        waitToAck = new Condition2(lock);
+
+        activSpeaker = false;
+        hasMessage = false;
+        currentWord = 0;
     }
 
     /**
@@ -27,6 +46,26 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
+        lock.acquire();
+
+        while (activSpeaker) {
+            waitToSpeak.sleep();
+        }
+
+        activSpeaker = true;
+        currentWord = word;
+        hasMessage = true;
+
+        waitToListen.wake();
+
+        while (hasMessage) {
+            waitToAck.sleep();
+        }
+
+        activSpeaker = false;
+        waitToSpeak.wake();
+
+        lock.release();
     }
 
     /**
@@ -36,6 +75,18 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-	return 0;
+	    lock.acquire();
+
+        while(!hasMessage) {
+            waitToListen.sleep();
+        }
+
+        int saveWord = currentWord;
+        hasMessage = false;
+
+        waitToAck.wake();
+
+        lock.release();
+        return saveWord;
     }
 }
