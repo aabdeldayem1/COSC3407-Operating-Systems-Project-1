@@ -2,6 +2,8 @@ package nachos.threads;
 
 import nachos.machine.*;
 
+import javax.xml.transform.Source;
+
 /**
  * A KThread is a thread that can be used to execute Nachos kernel code. Nachos
  * allows multiple threads to run concurrently.
@@ -428,9 +430,79 @@ public class KThread {
      */
     public static void selfTest() {
 		Lib.debug(dbgThread, "Enter KThread.selfTest");
-	
-		new KThread(new PingTest(1)).setName("forked thread").fork();
-		new PingTest(0).run();
+		System.out.println("Starting Task 1 Tests....");
+
+		//test 1
+		System.out.println("\nTest 1: Basic Join");
+
+		KThread threadB = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("\tThread B is running and is about to yield");
+				KThread.yield();
+				System.out.println("\tThread B finishing");
+			}
+		}).setName("Thread B");
+
+		threadB.fork();
+		System.out.println("\tMain Thread calling join on Thread B...");
+		threadB.join();
+		System.out.println("\tMain Thread joined with B");
+
+
+		//test 2
+		System.out.println("\n\n Test 2: Finished before joining");
+		KThread threadC = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("\tThread C is running finishing NOW");
+			}
+		}).setName("Thread C");
+
+		threadC.fork();
+
+		//run C to completion
+		KThread.yield();
+		KThread.yield();
+
+		System.out.println("\tMain thread calling join on Thread C (already finished)...");
+		threadC.join();
+		System.out.println("\tMain bypasses sleep queue");
+
+		System.out.println("\n\n Test 3: Multiple joins");
+		KThread target = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("\tTarget thread is almost done");
+			}
+		}).setName("Target thread");
+
+		target.fork();
+		System.out.println("\tMain thread joining target (This is a valid join)...");
+		target.join();
+		System.out.println("\tMain thread attempting to join again (This is invalid)...");
+
+		//This will crash the kernel it if uncommented
+		try{
+			target.join();
+		} catch (Error e){
+			System.out.println("\t Success: Assertion failuer caught");
+		}
+
+
+
+		System.out.println("\n\n Test 4: Self joins");
+		System.out.println("\tmain thread attempting to join itslef");
+
+		//will crash kernel if uncommented
+		try{
+			KThread.currentThread.join();
+		} catch (Error e){
+			System.out.println("\t Success: Assertion failuer caught");
+		}
+
+
+		System.out.println("\n--- Task 1 Tests Completed SUCCESS ---");
+
+//		new KThread(new PingTest(1)).setName("forked thread").fork();
+//		new PingTest(0).run();
     }
 
     private static final char dbgThread = 't';
