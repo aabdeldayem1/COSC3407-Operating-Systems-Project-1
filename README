@@ -11,11 +11,13 @@ How to Run the Assignment:
 	Clean and compile the Java source code by executing: gmake clean ---> gmake
 	Navigate into the execution directory: cd proj1
 	Boot the Nachos kernel directly using the Java Virtual Machine:java nachos.machine.Machine
-	The kernel will initialize, sequentially execute the selfTest() methods for Tasks 1 through 5, print the test outputs to the console, and safely halt.
+	The kernel will initialize, sequentially execute the selfTest() methods for Tasks 1 through 5, print the
+	test outputs to the console, and safely halt.
 
 Known Quirks & Program Notes:
-	macOS Execution Bypass: On macOS environments, attempting to run the system via the ./nachos or sh nachos wrapper script may trigger "permission denied" or "is a directory" errors. To guarantee execution regardless of system permission structures, the OS must be booted directly via java nachos.machine.Machine from inside the proj1 folder.
-	
-	Intentional Error Catching in Tests: During the Task 1 selfTest(), the terminal will output successful captures of AssertionFailureError. This is intentional. The test suite utilises try-catch blocks to capture the kernel panics triggered by illegal joins, allowing the OS to print a success message and continue to the next task without halting the entire test suite.
 
-	Thread Yielding Delays: Thread scheduling can occasionally execute faster than standard queue placement. In the testing blocks for Condition Variables and Communicators, several KThread.yield() calls are stacked intentionally to force the CPU to switch contexts and guarantee threads are properly asleep on empty channels before wake calls are issued.
+1. macOS Execution Bypass: On macOS environments, attempting to run the system via the ./nachos or sh nachos wrapper script may trigger "permission denied" or "is a directory" errors. To guarantee execution regardless of system permission structures, the OS must be booted directly via java nachos.machine.Machine from inside the proj1 folder.
+	
+2. Intentional Error Catching in Tests: During the Task 1 selfTest(), the terminal will output successful captures of AssertionFailureError. This is intentional. The test suite utilises try-catch blocks to capture the kernel panics triggered by illegal joins, allowing the OS to print a success message and continue to the next task without halting the entire test suite.
+
+3. Thread Yielding Delays: Thread scheduling can occasionally execute faster than standard queue placement. In the testing blocks for Condition Variables and Communicators, several KThread.yield() calls are stacked intentionally to force the CPU to switch contexts and guarantee threads are properly asleep on empty channels before wake calls are issued.
