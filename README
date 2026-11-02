@@ -12,7 +12,7 @@ How to Run the Assignment:
 	Navigate into the execution directory: cd proj1
 	Boot the Nachos kernel directly using the Java Virtual Machine:java nachos.machine.Machine
 	The kernel will initialize, sequentially execute the selfTest() methods for Tasks 1 through 5, print the
-	t test outputs to the console, and safely halt.
+	test outputs to the console, and safely halt.
 
 Known Quirks & Program Notes:
 
