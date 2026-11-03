@@ -357,7 +357,7 @@ public class KThread {
      * changed from running to blocked or ready (depending on whether the
      * thread is sleeping or yielding).
      *
-     * @param	finishing	<tt>true</tt> if the current thread is
+     * @param finishing	<tt>true</tt> if the current thread is
      *				finished, and should be destroyed by the new
      *				thread.
      */
