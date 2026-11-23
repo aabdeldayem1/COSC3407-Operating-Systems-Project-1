@@ -480,30 +480,93 @@ public class KThread {
 		System.out.println("\tMain thread attempting to join again (This is invalid)...");
 
 		//This will crash the kernel it if uncommented
+		boolean prevInt = Machine.interrupt().enabled();
+		boolean caughtMutiJoin = false;
 		try{
 			target.join();
 		} catch (Error e){
+			caughtMutiJoin = true;
 			System.out.println("\t Success: Assertion failuer caught");
+		} finally {
+			Machine.interrupt().restore(prevInt);
 		}
-
+		Lib.assertTrue(caughtMutiJoin, "Expected asseriton error on repeated join");
+		Lib.assertTrue(Machine.interrupt().enabled() == prevInt, "Interrupt state not restored after test 3");
 
 
 		System.out.println("\n\n Test 4: Self joins");
 		System.out.println("\tmain thread attempting to join itslef");
 
 		//will crash kernel if uncommented
+		prevInt = Machine.interrupt().enabled();
+		boolean caughtSelfJoin = false;
 		try{
 			KThread.currentThread.join();
 		} catch (Error e){
+			caughtSelfJoin = true;
 			System.out.println("\t Success: Assertion failuer caught");
+		} finally {
+			Machine.interrupt().restore(prevInt);
 		}
 
+		Lib.assertTrue(caughtSelfJoin, "Expected assertion Error on self join");
+		Lib.assertTrue(Machine.interrupt().enabled() == prevInt, "Interrupt state not restored after Test 4");
 
-		System.out.println("\n--- Task 1 Tests Completed SUCCESS ---");
 
 //		new KThread(new PingTest(1)).setName("forked thread").fork();
 //		new PingTest(0).run();
-    }
+
+		//Test 5: Unjoined completion
+		System.out.println("\n\nTest 5: Unjoined completion");
+		final boolean[] unJoinedDone = { false };
+		KThread unJoined = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("\tUnjoined thread running and finishing without being joined");
+				unJoinedDone[0] = true;
+			}
+		}).setName("Unjoined thread");
+
+		unJoined.fork();
+		while (!unJoinedDone[0]) {
+			KThread.yield();
+		}
+		KThread.yield(); // Allow thread to complete finish() cleanly
+		Lib.assertTrue(unJoinedDone[0], "Unjoined thread should complete cleanly");
+		System.out.println("\tSuccess: Unjoined thread completed cleanly");
+
+		// Test 6: Chained joins (Main -> Chain B -> Chain C)
+		System.out.println("\n\nTest 6: Chained joins");
+		final int[] chainOrder = { 0 };
+		final KThread chainC = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("\tChain C running...");
+				KThread.yield();
+				Lib.assertTrue(chainOrder[0] == 0, "Chain C should finish first");
+				chainOrder[0] = 1;
+				System.out.println("\tChain C finished");
+			}
+		}).setName("Chain C");
+
+		KThread chainB = new KThread(new Runnable() {
+			public void run() {
+				System.out.println("\tChain B joining Chain C...");
+				chainC.join();
+				Lib.assertTrue(chainOrder[0] == 1, "Chain B should resume after chain C");
+				chainOrder[0] = 2;
+				System.out.println("\tChain B finished");
+			}
+		}).setName("Chain B");
+
+		chainC.fork();
+		chainB.fork();
+		System.out.println("\tMain joining Chain B...");
+		chainB.join();
+		Lib.assertTrue(chainOrder[0] == 2, "Main should resume after Chain B");
+		System.out.println("\tSuccess: Chained join completed in order (C -> B -> Main)");
+
+		System.out.println("\n--- Task 1 Tests Completed SUCCESS ---");
+
+	}
 
     private static final char dbgThread = 't';
 

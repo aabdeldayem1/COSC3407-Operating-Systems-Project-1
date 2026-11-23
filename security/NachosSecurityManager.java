@@ -49,7 +49,7 @@ public class NachosSecurityManager extends SecurityManager {
 	
 	doPrivileged(new Runnable() {
 	    public void run() {
-		//System.setSecurityManager(NachosSecurityManager.this);
+		System.setSecurityManager(NachosSecurityManager.this);
 	    }
 	});
     }

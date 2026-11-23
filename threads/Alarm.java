@@ -111,6 +111,7 @@ public class Alarm {
 		final long[] elapsed = new long[1];
 		final int[] otherRuns = new int[1];
 		final boolean[] sleeperDone = new boolean[1];
+		final boolean[] observedBlocked = new boolean[1];
 
 		KThread sleeper = new KThread(new Runnable() {
 			public void run() {
@@ -129,6 +130,15 @@ public class Alarm {
 			public void run() {
 				while (!sleeperDone[0]) {
 					otherRuns[0]++;
+					// Verify sleeper is actually blocked in the alarm waitQueue
+					boolean intStatus = Machine.interrupt().disable();
+					for (WaitingThread wt : ThreadedKernel.alarm.waitQueue) {
+						if (wt.thread == sleeper) {
+							observedBlocked[0] = true;
+							break;
+						}
+					}
+					Machine.interrupt().restore(intStatus);
 					KThread.yield();
 				}
 			}
@@ -141,14 +151,28 @@ public class Alarm {
 
 		Lib.assertTrue(elapsed[0] >= 500, "Test 1 failed: slept only " + elapsed[0] + " ticks");
 		Lib.assertTrue(otherRuns[0] > 0, "Test 1 failed: other thread never ran while sleeping");
+		Lib.assertTrue(observedBlocked[0], "Test 1 failed: sleeper was never observed blocked in waitQueue");
 		System.out.println("\tSuccess: slept >= 500 ticks and other thread ran " + otherRuns[0] + " times");
 
 
 		//test 2
-		System.out.println("\n\n Test 2: Negative wait");
+		System.out.println("\n\n Test 2: Negative and zero wait");
 
+		final long[] zeroElapsed = new long[1];
+		final boolean[] zeroFinished = new boolean[1];
 		final long[] negElapsed = new long[1];
 		final boolean[] negFinished = new boolean[1];
+
+		KThread zeroThread = new KThread(new Runnable() {
+			public void run() {
+				long before = Machine.timer().getTime();
+				System.out.println("\tThread calling waitUntil(0)...");
+				ThreadedKernel.alarm.waitUntil(0);
+				zeroElapsed[0] = Machine.timer().getTime() - before;
+				zeroFinished[0] = true;
+				System.out.println("\tZero thread returned immediately (elapsed " + zeroElapsed[0] + ")");
+			}
+		}).setName("Zero thread");
 
 		KThread negThread = new KThread(new Runnable() {
 			public void run() {
@@ -157,39 +181,49 @@ public class Alarm {
 				ThreadedKernel.alarm.waitUntil(-10);
 				negElapsed[0] = Machine.timer().getTime() - before;
 				negFinished[0] = true;
-				System.out.println("\tThread returned immediately (elapsed " + negElapsed[0] + ")");
+				System.out.println("\tNegative Thread returned immediately (elapsed " + negElapsed[0] + ")");
 			}
 		}).setName("Negative thread");
 
+		zeroThread.fork();
+		zeroThread.join();
 		negThread.fork();
 		negThread.join();
 
-		Lib.assertTrue(negFinished[0], "Test 2 failed: thread never finished");
-		Lib.assertTrue(negElapsed[0] < 500, "Test 2 failed: thread appears to have slept");
-		System.out.println("\tSuccess: no sleep and no error");
+		Lib.assertTrue(zeroFinished[0], "Test 2 failed: zero-delay thread never finished");
+		Lib.assertTrue(zeroElapsed[0] < 500, "Test 2 failed: zero-delay thread appears to have slept");
+		Lib.assertTrue(negFinished[0], "Test 2 failed: negative-delay thread never finished");
+		Lib.assertTrue(negElapsed[0] < 500, "Test 2 failed: negative-delay thread appears to have slept");
+		System.out.println("\tSuccess: zero and negative waits returned without sleeping");
 
 
 		//test 3
 		System.out.println("\n\n Test 3: Multiple threads, different times");
 
+		final long[] elapsedA = new long[1];
+		final long[] elapsedB = new long[1];
 		final long[] finishA = new long[1];
 		final long[] finishB = new long[1];
 
 		KThread threadA = new KThread(new Runnable() {
 			public void run() {
-				System.out.println("\tThread A calling waitUntil(2000)");
+				long before = Machine.timer().getTime();
+				System.out.println("\tThread A calling waitUntil(2000) at " + before);
 				ThreadedKernel.alarm.waitUntil(2000);
 				finishA[0] = Machine.timer().getTime();
-				System.out.println("\tThread A woke at time " + finishA[0]);
+				elapsedA[0] = finishA[0] - before;
+				System.out.println("\tThread A woke at time " + finishA[0] + " (elapsed " + elapsedA[0] + ")");
 			}
 		}).setName("Thread A");
 
 		KThread threadB = new KThread(new Runnable() {
 			public void run() {
-				System.out.println("\tThread B calling waitUntil(100)");
+				long before = Machine.timer().getTime();
+				System.out.println("\tThread B calling waitUntil(100) at " + before);
 				ThreadedKernel.alarm.waitUntil(100);
 				finishB[0] = Machine.timer().getTime();
-				System.out.println("\tThread B woke at time " + finishB[0]);
+				elapsedB[0] = finishB[0] - before;
+				System.out.println("\tThread B woke at time " + finishB[0] + " (elapsed " + elapsedB[0] + ")");
 			}
 		}).setName("Thread B");
 
@@ -199,8 +233,9 @@ public class Alarm {
 		threadB.join();
 
 		Lib.assertTrue(finishB[0] < finishA[0], "Test 3 failed: B did not wake before A");
-		Lib.assertTrue(finishB[0] >= 100 && finishA[0] >= 2000, "Test 3 failed: a thread woke too early");
-		System.out.println("\tSuccess: B woke before A");
+		Lib.assertTrue(elapsedB[0] >= 100, "Test 3 failed: B woke too early (elapsed " + elapsedB[0] + ")");
+		Lib.assertTrue(elapsedA[0] >= 2000, "Test 3 failed: A woke too early (elapsed " + elapsedA[0] + ")");
+		System.out.println("\tSuccess: B woke before A and both met their requested elapsed delays");
 
 
 		//test 4

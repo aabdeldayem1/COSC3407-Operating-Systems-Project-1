@@ -2,6 +2,8 @@ package nachos.threads;
 
 import nachos.machine.*;
 
+import java.util.HashMap;
+
 /**
  * A <i>communicator</i> allows threads to synchronously exchange 32-bit
  * messages. Multiple threads can be waiting to <i>speak</i>,
@@ -90,148 +92,194 @@ public class Communicator {
         return saveWord;
     }
 
-    public static void selfTest(){
+    public static void selfTest() {
         System.out.println("\nStarting Task 4 Tests....");
-        Communicator communicator = new Communicator();
-        //test 1
-        System.out.println("\nTest 1: Basic Handoff");
+        final Communicator communicator = new Communicator();
 
-        KThread t1Listener = new KThread(() -> {
-            System.out.println("\tListener heard: " + communicator.listen());
+        // Test 1: Basic Handoff
+        System.out.println("\nTest 1: Basic Handoff");
+        final int[] t1Heard = { -1 };
+
+        KThread t1Listener = new KThread(new Runnable() {
+            public void run() {
+                t1Heard[0] = communicator.listen();
+                System.out.println("\tListener heard: " + t1Heard[0]);
+            }
         }).setName("T1 Listener");
 
-        KThread t1Speaker = new KThread(() -> {
-            System.out.println("\tSpeaker sending the number 42");
-            communicator.speak(42);
+        KThread t1Speaker = new KThread(new Runnable() {
+            public void run() {
+                System.out.println("\tSpeaker sending the number 42");
+                communicator.speak(42);
+            }
         }).setName("T1 Speaker");
 
         t1Speaker.fork();
         t1Listener.fork();
         t1Speaker.join();
         t1Listener.join();
-
+        Lib.assertTrue(t1Heard[0] == 42, "Test 1 failed: expected 42, got " + t1Heard[0]);
         System.out.println("\tTEST 1 SUCCESSFUL");
 
+        // Test 2: Speaker Arrives First (assert unmatched speaker does not return)
         System.out.println("\nTest 2: Speaker Arrives First");
-        KThread t2Speaker = new KThread(() -> {
-            System.out.println("\tSpeaker sending 100...");
-            communicator.speak(100);
+        final boolean[] t2SpeakerDone = { false };
+        final int[] t2Heard = { -1 };
+
+        KThread t2Speaker = new KThread(new Runnable() {
+            public void run() {
+                System.out.println("\tSpeaker sending 100...");
+                communicator.speak(100);
+                t2SpeakerDone[0] = true;
+            }
         }).setName("T2 Speaker");
 
-        KThread t2Listen = new KThread(() -> {
-            System.out.println("\tListener heard: " + communicator.listen());
+        KThread t2Listen = new KThread(new Runnable() {
+            public void run() {
+                t2Heard[0] = communicator.listen();
+                System.out.println("\tListener heard: " + t2Heard[0]);
+            }
         }).setName("T2 Listen");
 
         t2Speaker.fork();
-        KThread.yield();
-        KThread.yield();
-        t2Listen.fork();
+        for (int i = 0; i < 10; i++) {
+            KThread.yield();
+        }
+        Lib.assertTrue(!t2SpeakerDone[0], "Test 2 failed: unmatched speaker returned before listener arrived");
 
+        t2Listen.fork();
         t2Speaker.join();
         t2Listen.join();
+        Lib.assertTrue(t2SpeakerDone[0] && t2Heard[0] == 100, "Test 2 failed: expected 100");
         System.out.println("\tTEST 2 SUCCESSFUL");
 
-        System.out.println("\nTest 3: Listener Arrives first");
+        // Test 3: Listener Arrives First (assert unmatched listener does not return)
+        System.out.println("\nTest 3: Listener Arrives First");
+        final boolean[] t3ListenerDone = { false };
+        final int[] t3Heard = { -1 };
 
-        KThread t3Listener = new KThread(() -> {
-            System.out.println("\tListener heard: " + communicator.listen());
+        KThread t3Listener = new KThread(new Runnable() {
+            public void run() {
+                t3Heard[0] = communicator.listen();
+                t3ListenerDone[0] = true;
+                System.out.println("\tListener heard: " + t3Heard[0]);
+            }
         }).setName("T3 Listener");
 
-        KThread t3Speaker = new KThread(() -> {
-            System.out.println("\tSpeaker sending 200...");
-            communicator.speak(200);
+        KThread t3Speaker = new KThread(new Runnable() {
+            public void run() {
+                System.out.println("\tSpeaker sending 200...");
+                communicator.speak(200);
+            }
         }).setName("T3 Speaker");
 
         t3Listener.fork();
-        KThread.yield();
-        KThread.yield();
-        t3Speaker.fork();
+        for (int i = 0; i < 10; i++) {
+            KThread.yield();
+        }
+        Lib.assertTrue(!t3ListenerDone[0], "Test 3 failed: unmatched listener returned before speaker arrived");
 
+        t3Speaker.fork();
         t3Speaker.join();
         t3Listener.join();
+        Lib.assertTrue(t3ListenerDone[0] && t3Heard[0] == 200, "Test 3 failed: expected 200");
         System.out.println("\tTEST 3 SUCCESSFUL");
 
+        // Test 4: Speaker Queue
         System.out.println("\nTest 4: Speaker Queue");
         KThread[] t4Speakers = new KThread[3];
+        final HashMap<Integer, Integer> t4Expected = new java.util.HashMap<Integer, Integer>();
+        final HashMap<Integer, Integer> t4Actual = new java.util.HashMap<Integer, Integer>();
+        final Lock t4Lock = new Lock();
 
-        for(int i =0 ; i < 3; i++){
-            final int val = i + 1;
-            t4Speakers[i] = new KThread(() -> {
-                System.out.println("\tQueued Speaker " + val + " sending " + (val * 10) +"....");
-                communicator.speak(val*10);
-                System.out.println("\tQueued Speaker " + val + " finished");
-            }).setName("T4 Speaker" + val);
+        for (int i = 0; i < 3; i++) {
+            final int val = (i + 1) * 10;
+            t4Expected.put(val, 1);
+            t4Speakers[i] = new KThread(new Runnable() {
+                public void run() {
+                    System.out.println("\tQueued Speaker sending " + val + "...");
+                    communicator.speak(val);
+                    System.out.println("\tQueued Speaker finished " + val);
+                }
+            }).setName("T4 Speaker " + val);
             t4Speakers[i].fork();
         }
 
         KThread.yield();
 
-        KThread t4Listener1 = new KThread(() -> {
-            System.out.println("\tListener 1 heard: " + communicator.listen());
-        }).setName("T4 Listener");
-
-        t4Listener1.fork();
-        System.out.println("\tCreating 2 more listeners to remove the queued threads");
-        KThread t4Listener2 = new KThread(() -> {
-            System.out.println("\tListener 2 heard: " + communicator.listen());
-        });
-        KThread t4Listener3 = new KThread(() -> {
-            System.out.println("\tListener 3 heard: " + communicator.listen());
-        });
-
-        t4Listener2.fork();
-        t4Listener3.fork();
-
-        for(int i = 0; i < 3; i++) t4Speakers[i].join();
-
-        t4Listener1.join();
-        t4Listener2.join();
-        t4Listener3.join();
-        System.out.println("\tTEST 4 SUCCESSFUL");
-
-        System.out.println("\nTest 5: Race Condition Test");
-        final int[] sums = {0, 0};
-        Lock sumLock = new Lock();
-        KThread[] raceSpeakers = new KThread[10];
-        KThread[] raceListeners = new KThread[10];
-
-        for(int i =0 ; i < 10; i++){
-            final int val = (i + 1) * 5;
-            raceSpeakers[i] = new KThread(() -> {
-                communicator.speak(val);
-                sumLock.acquire();
-                sums[0] += val;
-                sumLock.release();
-            }).setName("Race Speaker" + val);
-
-            raceListeners[i] = new KThread(() -> {
-                int heard = communicator.listen();
-                sumLock.acquire();
-                sums[1] += heard;
-                sumLock.release();
-            }).setName("Race Listener" + val);
+        KThread[] t4Listeners = new KThread[3];
+        for (int i = 0; i < 3; i++) {
+            final int id = i + 1;
+            t4Listeners[i] = new KThread(new Runnable() {
+                public void run() {
+                    int heard = communicator.listen();
+                    System.out.println("\tListener " + id + " heard: " + heard);
+                    t4Lock.acquire();
+                    Integer cur = t4Actual.get(heard);
+                    t4Actual.put(heard, cur == null ? 1 : cur + 1);
+                    t4Lock.release();
+                }
+            }).setName("T4 Listener " + id);
+            t4Listeners[i].fork();
         }
 
-        for(int i =0 ; i < 10; i++){
+        for (int i = 0; i < 3; i++) {
+            t4Speakers[i].join();
+            t4Listeners[i].join();
+        }
+        Lib.assertTrue(t4Expected.equals(t4Actual), "Test 4 failed: msg frequencies do not match");
+        System.out.println("\tTEST 4 SUCCESSFUL");
+
+        // Test 5: Race cond test with msg freq
+        System.out.println("\nTest 5: Race Condition Test");
+        final int[] messages = { 5, 10, 15, 20, 20, 25, 30, 35, 40, 45 };
+        final int n = messages.length;
+        final java.util.HashMap<Integer, Integer> expectedFreq = new java.util.HashMap<Integer, Integer>();
+        final java.util.HashMap<Integer, Integer> actualFreq = new java.util.HashMap<Integer, Integer>();
+        final Lock freqLock = new Lock();
+
+        for (int i = 0; i < n; i++) {
+            Integer cur = expectedFreq.get(messages[i]);
+            expectedFreq.put(messages[i], cur == null ? 1 : cur + 1);
+        }
+
+        KThread[] raceSpeakers = new KThread[n];
+        KThread[] raceListeners = new KThread[n];
+
+        for (int i = 0; i < n; i++) {
+            final int val = messages[i];
+            raceSpeakers[i] = new KThread(new Runnable() {
+                public void run() {
+                    communicator.speak(val);
+                }
+            }).setName("Race Speaker " + i);
+
+            raceListeners[i] = new KThread(new Runnable() {
+                public void run() {
+                    int heard = communicator.listen();
+                    freqLock.acquire();
+                    Integer cur = actualFreq.get(heard);
+                    actualFreq.put(heard, cur == null ? 1 : cur + 1);
+                    freqLock.release();
+                }
+            }).setName("Race Listener " + i);
+        }
+
+        for (int i = 0; i < n; i++) {
             raceSpeakers[i].fork();
             raceListeners[i].fork();
         }
 
-        for(int i =0 ; i < 10; i++){
+        for (int i = 0; i < n; i++) {
             raceSpeakers[i].join();
             raceListeners[i].join();
         }
 
-        System.out.println("\tTotal Sent Sum: " + sums[0]);
-        System.out.println("\tTotal received Sum: " + sums[1]);
-
-        if(sums[0] == sums[1] && sums[0] > 0){
-            System.out.println("\tTest 5 SUCCESSFUL");
-            System.out.println("\n--- Task 4 Tests Completed SUCCESS ---");
-        } else {
-            System.out.println("\tTest 5 FAILED");
-            System.out.println("\n--- Task 4 Tests FAILED ---");
-        }
+        System.out.println("\tExpected freq: " + expectedFreq);
+        System.out.println("\tActual freq:   " + actualFreq);
+        Lib.assertTrue(expectedFreq.equals(actualFreq), "Test 5 failed: received message freq not matching sent messages");
+        System.out.println("\tTEST 5 SUCCESSFUL");
+        System.out.println("\n--- Task 4 Tests Completed SUCCESS ---");
     }
 
 }

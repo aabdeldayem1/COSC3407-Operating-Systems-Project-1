@@ -50,7 +50,7 @@ public class ThreadedKernel extends Kernel {
         Condition2.selfTest();
 	    Alarm.selfTest();
 	    Communicator.selfTest();
-        ReactWaterTest.selfTest();
+        ReactWater.selfTest();
 //	Semaphore.selfTest();
 //	SynchList.selfTest();
 //	if (Machine.bank() != null) {

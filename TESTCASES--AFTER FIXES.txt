@@ -1,0 +1,201 @@
+nachos 5.0j initializing... config interrupt timer user-check grader
+Starting Task 1 Tests....
+
+Test 1: Basic Join
+	Main Thread calling join on Thread B...
+	Thread B is running and is about to yield
+	Thread B finishing
+	Main Thread joined with B
+
+
+ Test 2: Finished before joining
+	Thread C is running finishing NOW
+	Main thread calling join on Thread C (already finished)...
+	Main bypasses sleep queue
+
+
+ Test 3: Multiple joins
+	Main thread joining target (This is a valid join)...
+	Target thread is almost done
+	Main thread attempting to join again (This is invalid)...
+	 Success: Assertion failuer caught
+
+
+ Test 4: Self joins
+	main thread attempting to join itslef
+	 Success: Assertion failuer caught
+
+
+Test 5: Unjoined completion
+	Unjoined thread running and finishing without being joined
+	Success: Unjoined thread completed cleanly
+
+
+Test 6: Chained joins
+	Main joining Chain B...
+	Chain C running...
+	Chain B joining Chain C...
+	Chain C finished
+	Chain B finished
+	Success: Chained join completed in order (C -> B -> Main)
+
+--- Task 1 Tests Completed SUCCESS ---
+
+
+
+ Stating Task 2 Tests....
+
+ Test 1: Sleep and wake
+	 Thread A has lock. sleeping
+	Main thread calling wake()
+	 Thread A is awake, reaquired lock, and finishing tasks
+
+	TEST 1 SUCCESSFUL
+
+Test 2: Multiple waiting threads...
+	Thread B acquired lock, calling sleep()...
+	Thread C acquired lock, calling sleep()...
+	Main thread calling wake() ONCE (should wake exactly 1)...
+	Thread B woke up and finishing.
+	Main thread calling wake() a second time...
+	Thread C woke up and finishing.
+
+	TEST 2 SUCCESSFUL
+
+ Test 3: Wake all threads
+	Thread D acquired lock, calling sleep()...
+	Thread E acquired lock, calling sleep()...
+	Main thread calling wakeAll()...
+	Thread D woke up and finishing.
+	Thread E woke up and finishing.
+
+	TEST 3 SUCCESSFUL
+
+Test 4: Empty waiting list
+	Main thread calling wake() and wakeAll() with 0 sleeping threads...
+
+	TEST 4 SUCCESSFUL
+
+Test 5: Calls without holding the lock
+
+	TEST 5 SUCCESSFUL
+
+--- Task 2 Tests Completed SUCCESS ---
+Starting Task 3 Tests....
+
+Test 1: Basic Wait
+	Sleeper calling waitUntil(500) at time 1080
+	Sleeper woke at time 2070 (elapsed 990)
+	Success: slept >= 500 ticks and other thread ran 49 times
+
+
+ Test 2: Negative and zero wait
+	Thread calling waitUntil(0)...
+	Zero thread returned immediately (elapsed 0)
+	Thread calling waitUntil(-10)...
+	Negative Thread returned immediately (elapsed 0)
+	Success: zero and negative waits returned without sleeping
+
+
+ Test 3: Multiple threads, different times
+	Thread A calling waitUntil(2000) at 2190
+	Thread B calling waitUntil(100) at 2200
+	Thread B woke at time 2560 (elapsed 360)
+	Thread A woke at time 4550 (elapsed 2360)
+	Success: B woke before A and both met their requested elapsed delays
+
+
+ Test 4: Multiple threads, same time
+	Thread 0 woke (elapsed 400)
+	Thread 1 woke (elapsed 400)
+	Thread 2 woke (elapsed 400)
+	Thread 3 woke (elapsed 400)
+	Thread 4 woke (elapsed 400)
+	Success: all 5 threads woke
+
+--- Task 3 Tests Completed SUCCESS ---
+
+Starting Task 4 Tests....
+
+Test 1: Basic Handoff
+	Speaker sending the number 42
+	Listener heard: 42
+	TEST 1 SUCCESSFUL
+
+Test 2: Speaker Arrives First
+	Speaker sending 100...
+	Listener heard: 100
+	TEST 2 SUCCESSFUL
+
+Test 3: Listener Arrives First
+	Speaker sending 200...
+	Listener heard: 200
+	TEST 3 SUCCESSFUL
+
+Test 4: Speaker Queue
+	Queued Speaker sending 10...
+	Queued Speaker sending 20...
+	Queued Speaker sending 30...
+	Listener 1 heard: 10
+	Queued Speaker finished 10
+	Listener 2 heard: 20
+	Queued Speaker finished 20
+	Listener 3 heard: 30
+	Queued Speaker finished 30
+	TEST 4 SUCCESSFUL
+
+Test 5: Race Condition Test
+	Expected freq: {35=1, 20=2, 5=1, 40=1, 25=1, 10=1, 45=1, 30=1, 15=1}
+	Actual freq:   {35=1, 20=2, 5=1, 40=1, 25=1, 10=1, 45=1, 30=1, 15=1}
+	TEST 5 SUCCESSFUL
+
+--- Task 4 Tests Completed SUCCESS ---
+
+Starting ReactWater Tests....
+
+Test 1: Basic Reaction (2H + 1O)
+water was made!
+	TEST 1 SUCCESSFUL
+
+Test 2: Hydrogen Waits for Oxygen
+water was made!
+	TEST 2 SUCCESSFUL
+
+Test 3: Oxygen Waits for Two Hydrogen Threads
+water was made!
+	TEST 3 SUCCESSFUL
+
+Test 4: Balanced Multiple Reactions (4H + 2O)
+water was made!
+water was made!
+	TEST 4 SUCCESSFUL
+
+Test 5: Multiple reactions 20H + 10 oxygens
+water was made!
+water was made!
+water was made!
+water was made!
+water was made!
+water was made!
+water was made!
+water was made!
+water was made!
+water was made!
+	TEST 5 SUCCESSFUL
+
+Test 6: Shortage 1H + 1O
+	TEST 6 SUCCESSFUL
+
+Test 7: Surplus Test (4H + 3O)
+water was made!
+water was made!
+	TEST 7 SUCCESSFUL
+
+--- All ReactWater Tests Completed SUCCESS ---
+Machine halting!
+
+Ticks: total 12790, kernel 12790, user 0
+Disk I/O: reads 0, writes 0
+Console I/O: reads 0, writes 0
+Paging: page faults 0, TLB misses 0
+Network I/O: received 0, sent 0
